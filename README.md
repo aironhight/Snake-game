@@ -2,6 +2,7 @@
 Test for the junior android developer position
 
 Game instructions:
+------------------
 In order to run the game run the Launcher.java class file. Then enter the map file directory by following the instructions that
 are printed in the console (to run the map given in the pdf file with the task, just type in 'maps/ExampleMap.txt' and press enter).
 
@@ -10,9 +11,9 @@ To start playing just hit any of the arrow keys and the snake will start slither
 
 If you are as impatient as I am to eat more fruits just press the 'F' button on your keyboard
 and a new fruit will be spawned on the field. 
-----------------------------------------------
 
 I would like to mention:
+------------------------
 - The tiles in the game have their coordinates saved in a two dimensional array. Because of the way that the two dimensional arrays
   work, the X and Y parameters of each tile are opposite of the 'conventional' ones that we are used to - 
   Y is left and right, X is up and down
