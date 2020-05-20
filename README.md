@@ -23,3 +23,5 @@ I would like to mention:
   very likely to be a snake tile.
   
 - Please check the javadocs to get more information about the methods(doc/index.html) or read the inline comments.
+
+- Most of the testing was done in the 'System testing' phase by actually playing the game.
