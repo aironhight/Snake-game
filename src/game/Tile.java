@@ -26,4 +26,17 @@ public class Tile {
 	public void setType(TileType type) {
 		this.type = type;
 	}
+	
+	public void setCoords(int x, int y) {
+		this.x = x;
+		this.y = y;
+	}
+	
+	public Tile copy() {
+		return new Tile(this.x, this.y, this.type);
+	}
+	
+	public String toString() {
+		return String.format("%s   |  X:%d Y:%d", type, x, y);
+	}
 }

@@ -15,11 +15,11 @@ public class Launcher {
 		char[][] boundaries = null;
 		
 		while(!mapLoaded) {
-			String mapNameInput = keyboard.nextLine();
+			//String mapNameInput = keyboard.nextLine();
 			
 			try {
-				//boundaries = MapFileReader.getMapData("maps/ExampleMap.txt");
-				boundaries = MapFileReader.getMapData(mapNameInput);
+				boundaries = MapFileReader.getMapData("maps/ExampleMap.txt");
+				//boundaries = MapFileReader.getMapData(mapNameInput);
 				
 			} catch (FileNotFoundException e) {
 				//File not found.

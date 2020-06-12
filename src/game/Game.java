@@ -6,49 +6,41 @@ import java.awt.GridLayout;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Random;
 
 import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 
-import com.sun.glass.ui.Window.State;
-
-
 public class Game {
+	private static final int MOVES_UNTIL_NEW_FRUIT = 20;
+	
 	private Tile[][] field;
 	private Tile fruit;
-	private ArrayList<Tile> snakeTiles;
 	private ArrayList<Tile> grassTiles;
 	private boolean isDead;
-	private boolean leftDirection, rightDirection, upDirection, downDirection, changingDirection;
+	private boolean changingDirection;
 	private JFrame frame;
 	private KeyListener keyListener;
 	private int snakeSpeed;
 	private int grassCount;
-	private int snakeLength;
 	private int width;
 	private int height;
 	private int snakeMovesCounter;
 	private Container ctr;
 	private Thread movingThread;
 	private boolean canMove;
+	private Snake snake;
+	private SnakeDirection direction;
 	
 	public Game(Tile[][] field) {
 		System.out.println("To start moving press any arrow key.");
 		this.field = field;
 		isDead = false;
-		leftDirection = false;
-		rightDirection = false;
-		upDirection = false;
-		downDirection = false;
 		canMove = true;
-		snakeTiles = new ArrayList<Tile>(1); 
 		grassTiles = new ArrayList<Tile>();
 		width = field[0].length;
 		height = field.length;
-		snakeLength=1;
 		snakeSpeed = 250; //The lower the number, the faster the snake is.
 		snakeMovesCounter = 0; //Required for the fruit respawn.
 		
@@ -57,6 +49,14 @@ public class Game {
 		
 		ctr = frame.getContentPane();
 		
+		initialize(field);
+	}
+	
+	/**
+	 * Initialization of some parameters and operations that require multiple lines of code.
+	 * Done outside of the constructor for readability purpose.
+	 */
+	private void initialize(Tile[][] field) {
 		//initialize grass
 		for(int i=0; i<height; i++) {
 			for(int j=0; j<width; j++) {
@@ -71,20 +71,6 @@ public class Game {
 			return;
 		}
 		
-		//Take a "spawn point for the snake"
-		Tile firstSnake = grassTiles.remove(0);
-		firstSnake.setType(TileType.SNAKE);
-		snakeTiles.add(firstSnake);
-		
-		initialize();
-		movingThread.start();
-	}
-	
-	/**
-	 * Initialization of some parameters and operations that require multiple lines of code.
-	 * Done outside of the constructor for readability purpose.
-	 */
-	private void initialize() {
 		//Draw the field
 		for(int i=0; i<height; i++) {
 			for(int j=0; j<width; j++) {
@@ -105,42 +91,32 @@ public class Game {
 		frame.requestFocus();
 		frame.setVisible(true);
 		
-		//Initialize threads
-		movingThread = new Thread(
-				new Runnable() {
-					@Override
-					public void run() {
-						while(!isDead) {
-							try {
-								Thread.sleep(snakeSpeed);
-							} catch (InterruptedException e) {
-								e.printStackTrace();
-							}	
-							moveSnake();
-						}
-					}					
-				});
-				
-		//Initialize Key listnere
+		Tile snakeSpawn = grassTiles.get(2);
+		changeTileType(snakeSpawn, TileType.SNAKE);
+		snake = new Snake(snakeSpawn);
+		
+		//Initialize Key listener
 		keyListener = new KeyListener() {
 			@Override
 			public void keyPressed(KeyEvent evt) {
-
 				switch (evt.getKeyCode()) {
+				case 10: //Enter
+					break;
+				
 				case 37: // Left
-					switchDirection("left");
+					switchDirection(SnakeDirection.LEFT);
 					break;
 
 				case 38: // Up
-					switchDirection("up");
+					switchDirection(SnakeDirection.UP);
 					break;
 
 				case 39: // Right
-					switchDirection("right");
+					switchDirection(SnakeDirection.RIGHT);
 					break;
 
 				case 40: // Down
-					switchDirection("down");
+					switchDirection(SnakeDirection.DOWN);
 					break;
 				case 70: //Spawning fruits with 'F'
 					spawnFruit();
@@ -156,6 +132,22 @@ public class Game {
 			
 		};
 		frame.addKeyListener(keyListener);
+		
+		movingThread = new Thread(
+				new Runnable() {
+					@Override
+					public void run() {
+						while(!isDead) {
+							try {
+								Thread.sleep(snakeSpeed);
+							} catch (InterruptedException e) {
+								e.printStackTrace();
+							}	
+							moveSnake();
+						}
+					}					
+				});
+		movingThread.start();
 	}
 
 	/**
@@ -163,113 +155,52 @@ public class Game {
 	 * opposite of the current direction the method returns without making changes.
 	 * @param nextDirection The desired direction of the snake.
 	 */
-	private void switchDirection(String nextDirection) {
+	private void switchDirection(SnakeDirection nextDirection) {
 		if (changingDirection) //If the user has already made a change in the direction while the snake is in that state.
 			return;
 		
 		switch (nextDirection){
 		
-		case "left":
-			if(leftDirection || rightDirection) 
+		case LEFT:
+			if(direction == SnakeDirection.LEFT || direction == SnakeDirection.RIGHT)
 				return;
-			
-			upDirection = false;
-			downDirection = false;
-			leftDirection = true;
+			direction = SnakeDirection.LEFT;
 			changingDirection = true;
 			break;
 			
-		case "up":
-			if(upDirection || downDirection)
+		case UP:
+			if(direction == SnakeDirection.UP || direction == SnakeDirection.DOWN)
 				return;
 			
-			leftDirection = false;
-			rightDirection = false;
-			upDirection = true;
+			direction = SnakeDirection.UP;
 			changingDirection = true;
 			break;
 			
-		case "right":
-			if(leftDirection || rightDirection)
+		case RIGHT:
+			if(direction == SnakeDirection.RIGHT || direction == SnakeDirection.LEFT)
 				return;
 			
-			upDirection = false;
-			downDirection = false;
-			rightDirection = true;
+			direction = SnakeDirection.RIGHT;
 			changingDirection = true;
 			break;
 			
-		case "down":
-			if(upDirection || downDirection)
+		case DOWN:
+			if(direction == SnakeDirection.DOWN || direction == SnakeDirection.UP)
 				return;
 			
-			leftDirection = false;
-			rightDirection = false;
-			downDirection = true;
+			direction = SnakeDirection.DOWN;
 			changingDirection = true;
 			break;
 		}
 	}
 
 	/**
-	 * Reverses the movement of the snake. If the snake is more than 1 tile long the direction
-	 * of the snake is retrieved by the position of the last 2 snake tiles(the tail).
+	 * Reverses the movement of the snake.
 	 */
 	private void reverseMovement() {
-		
-		if(snakeLength == 1) {
-			//Snake is 1 tile long.
-			Collections.reverse(snakeTiles);
-			if(leftDirection) {
-				leftDirection = false;
-				rightDirection = true;
-			} else if(upDirection) {
-				upDirection = false;
-				downDirection = true;
-			}
-			else if(rightDirection) {
-				rightDirection = false;
-				leftDirection = true;
-			}
-			else if(downDirection) {
-				downDirection = false;
-				upDirection = true;
-			}
-		} else {
-			//Snake is longer than 1 tile... Take the last 2 tiles and see the direction from them.
-			canMove = false;
-			Tile tail = snakeTiles.get(snakeLength-1);
-			Tile secondToTail = snakeTiles.get(snakeLength-2);
-			
-			if(tail.getX() - secondToTail.getX() == 0) {
-				//Moving on the Y axis (left or right)
-				leftDirection = false; upDirection = false; rightDirection = false; downDirection = false;
-				
-				if(tail.getY() - secondToTail.getY() == 1) {
-					//Currently moving left. Change to right.
-					leftDirection = false; upDirection = false; downDirection = false;
-					rightDirection = true;
-				} else {
-					//Currently moving right. Change to left.
-					upDirection = false; rightDirection = false; downDirection = false;
-					leftDirection = true;
-				}
-			} else {
-				//Moving on the X axis (up or down)
-				if(tail.getX() - secondToTail.getX() == 1) {
-					//Currently moving up. Change to down.
-					leftDirection = false; upDirection = false; rightDirection = false;
-					downDirection = true;
-				} else {
-					//Currently moving down. Change to up.
-					leftDirection = false;rightDirection = false; downDirection = false;
-					upDirection = true;
-				}
-			}
-			Collections.reverse(snakeTiles); //Reverse the snake body.
-			canMove = true;
-		}
-		
+		canMove = false;
+		direction = snake.reverse(direction);
+		canMove = true;
 	}
 	
 	/**
@@ -283,28 +214,37 @@ public class Game {
 	 * </ul>
 	 */
 	private void moveSnake() {
-
-		if(!canMove)
+		if(!canMove || direction == null)
 			return;
+		canMove = false;
 		
-		Tile snakeHead = snakeTiles.get(0);
+		Tile snakeHead = snake.head();
+	
 		Tile nextTile = null;
-		changingDirection = false;
-		
-		if(leftDirection) {
+		switch(direction) {
+		case LEFT:
 			nextTile = field[snakeHead.getX()][snakeHead.getY()-1];
-		} 
-		else if(upDirection) {
+			break;
+			
+		case UP:
 			nextTile = field[snakeHead.getX()-1][snakeHead.getY()];
-		}
-		else if(rightDirection) {
+			break;
+			
+		case RIGHT:
 			nextTile = field[snakeHead.getX()][snakeHead.getY()+1];
-		}
-		else if(downDirection) {
+			break;
+			
+		case DOWN:
 			nextTile = field[snakeHead.getX()+1][snakeHead.getY()];	
+			break;
+			
 		}
 		
+		changingDirection = false;
+
 		if(nextTile != null) {
+			Tile tail = snake.tail().copy();
+
 			switch(nextTile.getType()) {
 			case APPLE:
 				//If all tiles are filled. End game.
@@ -312,43 +252,55 @@ public class Game {
 					win();
 					break;
 				}
-				//Add a snake tile in front of the 'head'. Keep the body
-				changeTileType(nextTile, TileType.SNAKE);
-				snakeTiles.add(0, nextTile);
-				snakeLength++;
+				fruit = null;
+			
+				snake.moveSnake(nextTile.getX(), nextTile.getY());
+				changeTileType(nextTile, TileType.SNAKE); //Change the next tile to a SNAKE tile. Put it as the 'head' of the snake afterwards.
+				snake.grow(tail);
+				snakeMovesCounter = 0;
+				spawnFruit();
 				break;
 				
 			case GRASS:
 				//Change the last (tail) tile to a GRASS tile.
-				changeTileType(snakeTiles.remove(snakeLength-1), TileType.GRASS); 
+				snake.moveSnake(nextTile.getX(), nextTile.getY());
 				changeTileType(nextTile, TileType.SNAKE); //Change the next tile to a SNAKE tile. Put it as the 'head' of the snake afterwards.
-				snakeTiles.add(0, nextTile);
+				changeTileType(tail, TileType.GRASS);
+				
 				snakeMovesCounter++;
-				if(snakeMovesCounter > 9) {
+				if(snakeMovesCounter > MOVES_UNTIL_NEW_FRUIT) {
 					spawnFruit();
 					snakeMovesCounter = 0;
 				}
+				
 				break;
 			
 			case PEAR:
 				//In case a pear was spawned on the last free tile.
+				canMove = false;
 				if(grassCount == 0) {
 					isDead = true;
-					System.out.println("YOU WON!");
+					win();
 				}
-				changeTileType(nextTile, TileType.GRASS);
+				snake.moveSnake(nextTile.getX(), nextTile.getY());
+				changeTileType(nextTile, TileType.SNAKE); //Change the next tile to a SNAKE tile. Put it as the 'head' of the snake afterwards.
+				changeTileType(field[tail.getX()][tail.getY()], TileType.GRASS);
+				
 				reverseMovement();
+				fruit = null;
 				break;
 				
 			case SNAKE: //Collision
+				System.out.println("You collided in a snake tile!");
 				die();
 				break;
 				
 			case WALL: //Collision
+				System.out.println("You collided in a wall!");
 				die();
 				break;
 			}
-			
+			canMove = true;
 		}		
 	}
 	
@@ -358,11 +310,13 @@ public class Game {
 	 * @param newType The new tile type.
 	 */
 	private void changeTileType(Tile tile, TileType newType) {
-		if(tile.getType() == TileType.GRASS && newType != TileType.GRASS) {
+		tile = field[tile.getX()][tile.getY()];
+		if(tile.getType() == TileType.GRASS) {
 			grassCount--;
+			grassTiles.remove(tile);
 		}
 			
-		if(tile.getType() != TileType.GRASS && newType == TileType.GRASS) {
+		if(newType == TileType.GRASS) {
 			grassTiles.add(tile);
 			grassCount++;
 		}
@@ -374,7 +328,7 @@ public class Game {
 		
 		tile.setType(newType);
 		JLabel jbt2 = (JLabel)ctr.getComponent(getTileId(tile));
-		jbt2.setText(newType.getTileSymbol() + "");
+		jbt2.setText(tile.getType().getTileSymbol() + "");
 		frame.validate();
 		frame.repaint();
 	}
@@ -384,7 +338,8 @@ public class Game {
 	 */
 	private void die() {
 		isDead = true;
-		System.out.println("Game over! The length of the snake was " + snakeLength + ". "
+		movingThread.interrupt();
+		System.out.println("Game over! The length of the snake was " + snake.size() + ". "
 				+ "You needed " + grassCount + " apples to beat the game. :(");
 	}
 	
@@ -393,7 +348,7 @@ public class Game {
 	 */
 	private void win() {
 		isDead = true;
-		System.out.println("You won! The snake was " + snakeLength + " tiles long!");
+		System.out.println("You won! The snake was " + snake.size() + " tiles long!");
 	}
 
 	/**
@@ -432,6 +387,5 @@ public class Game {
 		
 		changeTileType(fruit, nextFruitType); //'Spawn' the new fruit	
 	}
-	
 	
 }
