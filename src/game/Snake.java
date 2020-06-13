@@ -1,7 +1,6 @@
 package game;
 
 import java.util.LinkedList;
-import java.util.NoSuchElementException;
 
 public class Snake {
 	private LinkedList<Tile> snakeTiles;
@@ -14,7 +13,7 @@ public class Snake {
 	public Snake(Tile tile) {
 		snakeTiles = new LinkedList<>();
 		tile.setType(TileType.SNAKE);
-		snakeTiles.add(tile.copy());
+		snakeTiles.add(tile.copy()); //Add copy so that any modifications on the tile will not modify the game field.
 		isReversed = false;
 	}
 	
@@ -38,11 +37,13 @@ public class Snake {
 	
 	/**
 	 * Grows the snake by adding a tile to the tail.
+	 * The added tile is a copy of the tile on the game field, preventing 
+	 * modification of the game field's tile coordinates.
 	 * @param tile The tile to be added to the tail.
 	 */
 	public void grow(Tile tile) {
 		if(isReversed)
-			snakeTiles.addFirst(tile.copy());
+			snakeTiles.addFirst(tile.copy()); 
 		else
 			snakeTiles.addLast(tile.copy());
 	}
@@ -55,7 +56,7 @@ public class Snake {
 	/**
 	 * Reverses the snake direction and returns the new direction
 	 * @param currentDirection the current direction of the snake
-	 * @return the new direciton of the snake
+	 * @return the new direction of the snake
 	 */
 	public SnakeDirection reverse(SnakeDirection currentDirection) {
 		if(size() == 1) {
@@ -78,7 +79,6 @@ public class Snake {
 		
 		SnakeDirection reversed = getReversedDirection();
 		isReversed = !isReversed;
-		System.out.println("Returning new direction : " + reversed.toString());
 		return reversed;
 	}
 	
@@ -130,6 +130,7 @@ public class Snake {
 				//Currently moving right. Change to left.
 				return SnakeDirection.LEFT;
 			}
+			
 		} else {
 			//Moving on the X axis (up or down)
 			if(tail.getX() - secondToTail.getX() == 1) {
@@ -141,6 +142,19 @@ public class Snake {
 			}
 		}
 			
+	}
+	
+	/**
+	 * @return a Tile[] containing all snake tiles.
+	 */
+	public Tile[] getAllTiles() {
+		Tile[] tiles = new Tile[size()];
+		
+		for(int i=0; i<tiles.length; i++) {
+			tiles[i] = snakeTiles.get(i);
+		}
+		
+		return tiles;
 	}
 	
 	

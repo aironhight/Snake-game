@@ -31,7 +31,9 @@ public class Tile {
 		this.x = x;
 		this.y = y;
 	}
-	
+	/**
+	 * Returns a new object with the same parameters as the current.
+	 */
 	public Tile copy() {
 		return new Tile(this.x, this.y, this.type);
 	}

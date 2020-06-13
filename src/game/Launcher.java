@@ -11,15 +11,18 @@ public class Launcher {
 		boolean mapLoaded = false;
 		
 		Scanner keyboard = new Scanner(System.in);
-		System.out.println("Please enter field file path and press enter: ");
+		System.out.println("Please enter the map's file name (the file should be in the 'maps' folder). \n"
+				+ "If you want to play the default map just press enter. ");
 		char[][] boundaries = null;
 		
 		while(!mapLoaded) {
-			//String mapNameInput = keyboard.nextLine();
+			String mapNameInput = keyboard.nextLine();
 			
 			try {
-				boundaries = MapFileReader.getMapData("maps/ExampleMap.txt");
-				//boundaries = MapFileReader.getMapData(mapNameInput);
+				if(mapNameInput.equals("")) //If there is no user input, load the default map.
+					boundaries = MapFileReader.getMapData("maps/ExampleMap.txt");
+				else //Else, attempt to load the user's desired map.
+					boundaries = MapFileReader.getMapData("maps/" + mapNameInput);
 				
 			} catch (FileNotFoundException e) {
 				//File not found.

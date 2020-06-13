@@ -14,6 +14,7 @@ import javax.swing.JLabel;
 
 public class Game {
 	private static final int MOVES_UNTIL_NEW_FRUIT = 20;
+	private static final int APPLE_PROBABILITY = 5;
 	
 	private Tile[][] field;
 	private Tile fruit;
@@ -32,6 +33,7 @@ public class Game {
 	private boolean canMove;
 	private Snake snake;
 	private SnakeDirection direction;
+	private Random random;
 	
 	public Game(Tile[][] field) {
 		System.out.println("To start moving press any arrow key.");
@@ -46,25 +48,28 @@ public class Game {
 		
 		frame = new JFrame("Snake game for Trading 212");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
 		
-		ctr = frame.getContentPane();
-		
-		initialize(field);
+		initialize();
 	}
 	
 	/**
 	 * Initialization of some parameters and operations that require multiple lines of code.
 	 * Done outside of the constructor for readability purpose.
 	 */
-	private void initialize(Tile[][] field) {
-		//initialize grass
-		for(int i=0; i<height; i++) {
-			for(int j=0; j<width; j++) {
-				if(field[i][j].getType().equals(TileType.GRASS))
-					grassTiles.add(field[i][j]);
+	private void initialize() {
+		ctr = frame.getContentPane();
+		
+		if(grassTiles.size() == 0) {
+			//initialize grass
+			for(int i=0; i<height; i++) {
+				for(int j=0; j<width; j++) {
+					if(field[i][j].getType().equals(TileType.GRASS))
+						grassTiles.add(field[i][j]);
+				}
 			}
 		}
-		
+
 		grassCount = grassTiles.size();
 		if(grassCount <= 1) { //Make sure there is grass on the field.
 			System.out.println("There is not enough grass on this field...");
@@ -91,9 +96,9 @@ public class Game {
 		frame.requestFocus();
 		frame.setVisible(true);
 		
-		Tile snakeSpawn = grassTiles.get(2);
-		changeTileType(snakeSpawn, TileType.SNAKE);
-		snake = new Snake(snakeSpawn);
+		
+		//Snake Spawn
+		spawnSnake();
 		
 		//Initialize Key listener
 		keyListener = new KeyListener() {
@@ -101,6 +106,8 @@ public class Game {
 			public void keyPressed(KeyEvent evt) {
 				switch (evt.getKeyCode()) {
 				case 10: //Enter
+					if(isDead)
+						restartGame();
 					break;
 				
 				case 37: // Left
@@ -133,6 +140,9 @@ public class Game {
 		};
 		frame.addKeyListener(keyListener);
 		
+		if(movingThread != null) //If the moving thread was already started.
+			movingThread.interrupt();
+		
 		movingThread = new Thread(
 				new Runnable() {
 					@Override
@@ -148,6 +158,41 @@ public class Game {
 					}					
 				});
 		movingThread.start();
+	}
+	
+	/**
+	 * Spawns the snake on a randomly chosen grass tile.
+	 */
+	private void spawnSnake() {		
+		random = new Random();
+		Tile snakeSpawn = grassTiles.get(random.nextInt(grassTiles.size()));
+		changeTileType(snakeSpawn, TileType.SNAKE);
+		snake = new Snake(snakeSpawn);
+		random = null;
+	}
+	
+	/**
+	 * Restarts the game 
+	 */
+	private void restartGame() {
+		isDead = false;
+		direction = null;
+		canMove = true;
+		changingDirection = false;
+		
+		//Remove the fruit from the field
+		if(fruit != null)
+			changeTileType(fruit, TileType.GRASS);
+		
+		//Remove the snake from the field
+		Tile[] snakeTiles = snake.getAllTiles();
+		for(Tile tile : snakeTiles) {
+			changeTileType(tile, TileType.GRASS);
+		}
+		
+		//Reinitialize the game.
+		ctr.removeAll();
+		initialize();
 	}
 
 	/**
@@ -257,20 +302,18 @@ public class Game {
 				snake.moveSnake(nextTile.getX(), nextTile.getY());
 				changeTileType(nextTile, TileType.SNAKE); //Change the next tile to a SNAKE tile. Put it as the 'head' of the snake afterwards.
 				snake.grow(tail);
-				snakeMovesCounter = 0;
 				spawnFruit();
 				break;
 				
 			case GRASS:
 				//Change the last (tail) tile to a GRASS tile.
-				snake.moveSnake(nextTile.getX(), nextTile.getY());
-				changeTileType(nextTile, TileType.SNAKE); //Change the next tile to a SNAKE tile. Put it as the 'head' of the snake afterwards.
-				changeTileType(tail, TileType.GRASS);
+				snake.moveSnake(nextTile.getX(), nextTile.getY()); //Move the snake to the next tile
+				changeTileType(nextTile, TileType.SNAKE); //Change the next tile to a SNAKE tile.
+				changeTileType(tail, TileType.GRASS); //Change the snake's tail to a GRASS tile
 				
 				snakeMovesCounter++;
 				if(snakeMovesCounter > MOVES_UNTIL_NEW_FRUIT) {
 					spawnFruit();
-					snakeMovesCounter = 0;
 				}
 				
 				break;
@@ -279,8 +322,8 @@ public class Game {
 				//In case a pear was spawned on the last free tile.
 				canMove = false;
 				if(grassCount == 0) {
-					isDead = true;
 					win();
+					break;
 				}
 				snake.moveSnake(nextTile.getX(), nextTile.getY());
 				changeTileType(nextTile, TileType.SNAKE); //Change the next tile to a SNAKE tile. Put it as the 'head' of the snake afterwards.
@@ -288,6 +331,7 @@ public class Game {
 				
 				reverseMovement();
 				fruit = null;
+				spawnFruit();
 				break;
 				
 			case SNAKE: //Collision
@@ -326,6 +370,7 @@ public class Game {
 			return;
 		}
 		
+		//Change the type of the tile and repaint it on the window.
 		tile.setType(newType);
 		JLabel jbt2 = (JLabel)ctr.getComponent(getTileId(tile));
 		jbt2.setText(tile.getType().getTileSymbol() + "");
@@ -338,9 +383,12 @@ public class Game {
 	 */
 	private void die() {
 		isDead = true;
-		movingThread.interrupt();
 		System.out.println("Game over! The length of the snake was " + snake.size() + ". "
-				+ "You needed " + grassCount + " apples to beat the game. :(");
+				+ "You needed " + grassCount + " apples to beat the game. :( \n"
+						+ "Press enter to start a new game.");
+		
+		if(movingThread != null)
+			movingThread.interrupt();
 	}
 	
 	/**
@@ -348,7 +396,11 @@ public class Game {
 	 */
 	private void win() {
 		isDead = true;
-		System.out.println("You won! The snake was " + snake.size() + " tiles long!");
+		System.out.println("You won! The snake was " + snake.size() + " tiles long! \n"
+				+ "Press enter to start a new game.");
+		
+		if(movingThread != null)
+			movingThread.interrupt();
 	}
 
 	/**
@@ -365,6 +417,7 @@ public class Game {
 	 */
 	private void spawnFruit() {
 		//If this is the last available tile. Keep the fruit.
+		snakeMovesCounter = 0;
 		if(grassCount == 0)
 			return;
 		
@@ -373,12 +426,12 @@ public class Game {
 			changeTileType(fruit, TileType.GRASS);
 		}
 		
-		Random random = new Random();
+		random = new Random();
 		
 		int fruitProbability = random.nextInt(6); //take a random number from 0 to 5 included 
 		TileType nextFruitType;
 		
-		if(fruitProbability < 5) //Probability for an apple 5 times more than a pear.
+		if(fruitProbability < APPLE_PROBABILITY) //Probability for an apple 5 times more than a pear.
 			nextFruitType = TileType.APPLE; //Set next fruit type to apple
 		else
 			nextFruitType = TileType.PEAR; //Set next fruit type to pear		
@@ -386,6 +439,8 @@ public class Game {
 		fruit = grassTiles.remove(random.nextInt(grassTiles.size())); 
 		
 		changeTileType(fruit, nextFruitType); //'Spawn' the new fruit	
+		random = null; //Clear the random...
+		Runtime.getRuntime().gc(); //Clear the random from the memory.
 	}
 	
 }
