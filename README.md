@@ -4,13 +4,15 @@ Test for the junior android developer position
 Game instructions:
 ------------------
 In order to run the game run the Launcher.java class file. Then enter the map file directory by following the instructions that
-are printed in the console (to run the map given in the pdf file with the task, just type in 'maps/ExampleMap.txt' and press enter).
+are printed in the console.
 
 If everything went okay the game should be launched in another window. 
 To start playing just hit any of the arrow keys and the snake will start slithering through the field!
 
 If you are as impatient as I am to eat more fruits just press the 'F' button on your keyboard
 and a new fruit will be spawned on the field. 
+
+When the game has ended you can restart the game by pressing 'Enter' on your keyboard.
 
 I would like to mention:
 ------------------------
