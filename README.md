@@ -1,6 +1,3 @@
-# Trading212-Test
-Test for the junior android developer position
-
 Game instructions:
 ------------------
 In order to run the game run the Launcher.java class file. Then enter the map file directory by following the instructions that
